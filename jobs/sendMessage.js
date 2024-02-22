@@ -1,6 +1,7 @@
 import { parentPort } from 'worker_threads'
-import moment from 'moment-timezone'
+import moment from 'moment'
 import axios from 'axios'
+import connectDB from '../config/db.js'
 import User from '../models/userModel.js'
 import Job from '../models/jobModel.js'
 
@@ -19,6 +20,8 @@ if (parentPort) {
   if (isCanceled) return
 
   //@desc collect user data
+  connectDB()
+
   const users = await User.find({
     birthDay: moment().tz(moment.tz.guess()).startOf('day'),
   }).lean()
@@ -32,7 +35,11 @@ if (parentPort) {
       .select({ user: 1, _id: 0 })
       .populate('user')
 
-    const target = jobs.map(j => j.user)
+    //@desc list user that not have job list
+    const compareJob = jobs.map((j) => j.user._id.toString())
+    const target = users.filter(
+      (user) => !compareJob.includes(user._id.toString())
+    )
 
     //@desc set new jobs based on user birthday
     if (target || target.length != 0) {
